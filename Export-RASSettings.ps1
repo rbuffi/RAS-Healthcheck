@@ -65,14 +65,14 @@ function Write-LogMessage {
 # Check if Parallels RAS module is installed
 Write-LogMessage "Checking for Parallels RAS PowerShell module..."
 try {
-    $rasModule = Get-Module -ListAvailable -Name "ParallelsRAS" | Select-Object -First 1
+    $rasModule = Get-Module -ListAvailable -Name "rasadmin" | Select-Object -First 1
     if (-not $rasModule) {
         throw "Parallels RAS PowerShell module not found. Please install it first."
     }
     Write-LogMessage "Found Parallels RAS module version $($rasModule.Version)"
     
     # Import the module
-    Import-Module -Name "ParallelsRAS" -ErrorAction Stop
+    Import-Module -Name "rasadmin" -ErrorAction Stop
     Write-LogMessage "Module imported successfully"
 } catch {
     Write-LogMessage "Error loading Parallels RAS module: $_" "ERROR"
@@ -333,7 +333,7 @@ $selection.Font.Name = "Calibri"
 $selection.Font.Size = 10
 
 # Get all available RAS cmdlets and try to get detailed info
-$rasCmdlets = Get-Command -Module ParallelsRAS | Where-Object { $_.Name -like "Get-RAS*" }
+$rasCmdlets = Get-Command -Module rasadmin | Where-Object { $_.Name -like "Get-RAS*" }
 
 foreach ($cmdlet in $rasCmdlets) {
     $cmdletName = $cmdlet.Name

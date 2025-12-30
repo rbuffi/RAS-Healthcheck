@@ -20,7 +20,7 @@ This PowerShell script documents all settings from a Parallels RAS installation 
 
 1. Ensure the Parallels RAS PowerShell module is installed:
    ```powershell
-   Get-Module -ListAvailable -Name ParallelsRAS
+   Get-Module -ListAvailable -Name rasadmin
    ```
 
 2. If not installed, install it according to Parallels RAS documentation
@@ -81,7 +81,7 @@ If you receive an error about the Parallels RAS module not being found:
 
 1. Verify the module is installed:
    ```powershell
-   Get-Module -ListAvailable -Name ParallelsRAS
+   Get-Module -ListAvailable -Name rasadmin
    ```
 
 2. Check the module path and ensure it's in your PSModulePath
