@@ -35,6 +35,14 @@ param(
 # Error handling
 $ErrorActionPreference = "Continue"
 
+# Disable all confirmation prompts and make script fully non-interactive
+$ConfirmPreference = "None"
+$WhatIfPreference = $false
+$ProgressPreference = "SilentlyContinue"
+$VerbosePreference = "SilentlyContinue"
+$DebugPreference = "SilentlyContinue"
+$WarningPreference = "Continue"
+
 # Helper function to convert objects to array of hashtables for table display
 function ConvertTo-HashtableArray {
     param([Parameter(ValueFromPipeline)]$InputObject)
@@ -86,7 +94,7 @@ try {
     $psWriteWordModule = Get-Module -ListAvailable -Name "PSWriteWord" | Select-Object -First 1
     if (-not $psWriteWordModule) {
         Write-LogMessage "PSWriteWord module not found. Installing..." "WARNING"
-        Install-Module -Name PSWriteWord -Scope CurrentUser -Force -SkipPublisherCheck
+        Install-Module -Name PSWriteWord -Scope CurrentUser -Force -SkipPublisherCheck -Confirm:$false -AllowClobber
         Write-LogMessage "PSWriteWord module installed successfully"
     }
     Import-Module -Name PSWriteWord -ErrorAction Stop
@@ -405,7 +413,28 @@ foreach ($cmdlet in $rasCmdlets) {
     Write-LogMessage "Processing $cmdletName..."
     
     try {
-        $results = & $cmdletName -ErrorAction SilentlyContinue
+        # Check if cmdlet has mandatory parameters that aren't provided
+        $cmdletInfo = Get-Command $cmdletName
+        $mandatoryParams = $cmdletInfo.Parameters.Values | Where-Object { $_.Attributes.Mandatory -eq $true -and $_.Name -notin @('Confirm', 'WhatIf') }
+        
+        # Skip cmdlets that require mandatory parameters (other than Confirm/WhatIf)
+        if ($mandatoryParams.Count -gt 0) {
+            Write-LogMessage "Skipping $cmdletName - requires mandatory parameters: $($mandatoryParams.Name -join ', ')" "WARNING"
+            continue
+        }
+        
+        # Suppress all prompts and use non-interactive mode
+        # Redirect stdin to prevent any input prompts
+        $results = $null
+        try {
+            # Use a try-catch to handle any prompts gracefully
+            $results = & $cmdletName -ErrorAction SilentlyContinue -Confirm:$false -WhatIf:$false 2>&1 | 
+                Where-Object { $_ -isnot [System.Management.Automation.ErrorRecord] }
+        } catch {
+            # If cmdlet prompts or errors, skip it
+            Write-LogMessage "Skipping $cmdletName due to error: $_" "WARNING"
+            continue
+        }
         
         if ($results) {
             Add-Section -Title "$cmdletName - Detailed Information" -Content ""
