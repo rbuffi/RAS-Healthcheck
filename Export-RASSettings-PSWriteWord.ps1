@@ -1,10 +1,11 @@
 <#
 .SYNOPSIS
-    Documents all Parallels RAS installation settings to a Word document.
+    Documents all Parallels RAS installation settings to a Word document using PSWriteWord.
 
 .DESCRIPTION
     This script collects all configuration settings from a Parallels RAS installation
     using the Parallels RAS PowerShell module and exports them to a Word document.
+    Uses PSWriteWord module which does not require Microsoft Word to be installed.
 
 .PARAMETER OutputPath
     Path where the Word document will be saved. Defaults to current directory.
@@ -12,20 +13,13 @@
 .PARAMETER DocumentName
     Name of the Word document (without extension). Defaults to "RAS-Settings-{timestamp}".
 
-.PARAMETER OutputFormat
-    Output format: Word, Excel, HTML, or Markdown. Defaults to Word.
-
 .EXAMPLE
-    .\Export-RASSettings.ps1 -OutputPath "C:\Reports" -DocumentName "RAS-Configuration"
-
-.EXAMPLE
-    .\Export-RASSettings.ps1 -OutputFormat Excel
+    .\Export-RASSettings-PSWriteWord.ps1 -OutputPath "C:\Reports" -DocumentName "RAS-Configuration"
 
 .NOTES
     Requires:
     - Parallels RAS PowerShell module (rasadmin)
-    - For Word output: PSWriteWord module (Install-Module PSWriteWord)
-    - For Excel output: ImportExcel module (Install-Module ImportExcel)
+    - PSWriteWord module (Install-Module PSWriteWord)
     - Appropriate permissions to access RAS configuration
 #>
 
@@ -35,14 +29,10 @@ param(
     [string]$OutputPath = (Get-Location).Path,
     
     [Parameter(Mandatory = $false)]
-    [string]$DocumentName = "RAS-Settings-$(Get-Date -Format 'yyyyMMdd-HHmmss')",
-    
-    [Parameter(Mandatory = $false)]
-    [ValidateSet('Word', 'Excel', 'HTML', 'Markdown')]
-    [string]$OutputFormat = 'Word'
+    [string]$DocumentName = "RAS-Settings-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
 )
 
-# Error handling - use Continue to allow graceful handling of missing cmdlets
+# Error handling
 $ErrorActionPreference = "Continue"
 
 # Helper function to convert objects to array of hashtables for table display
@@ -90,64 +80,57 @@ try {
     exit 1
 }
 
-# Check for required output format module
-Write-LogMessage "Checking for output format module..."
-$moduleName = switch ($OutputFormat) {
-    'Word' { 'PSWriteWord' }
-    'Excel' { 'ImportExcel' }
-    default { $null }
+# Check for PSWriteWord module
+Write-LogMessage "Checking for PSWriteWord module..."
+try {
+    $psWriteWordModule = Get-Module -ListAvailable -Name "PSWriteWord" | Select-Object -First 1
+    if (-not $psWriteWordModule) {
+        Write-LogMessage "PSWriteWord module not found. Installing..." "WARNING"
+        Install-Module -Name PSWriteWord -Scope CurrentUser -Force -SkipPublisherCheck
+        Write-LogMessage "PSWriteWord module installed successfully"
+    }
+    Import-Module -Name PSWriteWord -ErrorAction Stop
+    Write-LogMessage "PSWriteWord module loaded successfully"
+} catch {
+    Write-LogMessage "Error loading PSWriteWord module: $_" "ERROR"
+    Write-LogMessage "Please install it with: Install-Module -Name PSWriteWord -Scope CurrentUser" "ERROR"
+    exit 1
 }
 
-if ($moduleName) {
+# Ensure output directory exists
+if (-not (Test-Path $OutputPath)) {
+    Write-LogMessage "Creating output directory: $OutputPath"
     try {
-        $outputModule = Get-Module -ListAvailable -Name $moduleName | Select-Object -First 1
-        if (-not $outputModule) {
-            Write-LogMessage "Module $moduleName not found. Installing..." "WARNING"
-            Install-Module -Name $moduleName -Scope CurrentUser -Force -SkipPublisherCheck
-            Write-LogMessage "Module $moduleName installed successfully"
-        }
-        Import-Module -Name $moduleName -ErrorAction Stop
-        Write-LogMessage "Output format module $moduleName loaded successfully"
+        New-Item -ItemType Directory -Path $OutputPath -Force | Out-Null
     } catch {
-        Write-LogMessage "Error loading $moduleName module: $_" "ERROR"
-        Write-LogMessage "Please install it with: Install-Module -Name $moduleName -Scope CurrentUser" "ERROR"
+        Write-LogMessage "Error creating output directory: $_" "ERROR"
         exit 1
     }
 }
 
 # Create Word document
-Write-LogMessage "Creating Word document..."
+$fullPath = Join-Path $OutputPath "$DocumentName.docx"
+Write-LogMessage "Creating Word document at: $fullPath"
+
 try {
-    $doc = $word.Documents.Add()
-    $selection = $word.Selection
+    # Create new Word document
+    $WordDocument = New-WordDocument -FilePath $fullPath
     
-    # Document properties
-    $doc.BuiltInDocumentProperties("Title").Value = "Parallels RAS Configuration Documentation"
-    $doc.BuiltInDocumentProperties("Author").Value = $env:USERNAME
-    $doc.BuiltInDocumentProperties("Comments").Value = "Generated on $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+    # Add title
+    Add-WordText -WordDocument $WordDocument -Text "Parallels RAS Configuration Documentation" `
+        -FontSize 18 -Bold $true -Color Blue -Alignment Center
     
-    # Title
-    $selection.Font.Size = 18
-    $selection.Font.Bold = $true
-    $selection.TypeText("Parallels RAS Configuration Documentation")
-    $selection.TypeParagraph()
-    $selection.TypeParagraph()
+    Add-WordText -WordDocument $WordDocument -Text "" # Empty line
     
-    # Date and time
-    $selection.Font.Size = 11
-    $selection.Font.Bold = $false
-    $selection.TypeText("Generated: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')")
-    $selection.TypeParagraph()
-    $selection.TypeText("Generated by: $env:USERNAME")
-    $selection.TypeParagraph()
-    $selection.TypeText("Computer: $env:COMPUTERNAME")
-    $selection.TypeParagraph()
-    $selection.TypeParagraph()
+    # Add metadata
+    Add-WordText -WordDocument $WordDocument -Text "Generated: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -FontSize 11
+    Add-WordText -WordDocument $WordDocument -Text "Generated by: $env:USERNAME" -FontSize 11
+    Add-WordText -WordDocument $WordDocument -Text "Computer: $env:COMPUTERNAME" -FontSize 11
+    Add-WordText -WordDocument $WordDocument -Text "" # Empty line
     
     Write-LogMessage "Word document created successfully"
 } catch {
     Write-LogMessage "Error creating Word document: $_" "ERROR"
-    $word.Quit()
     exit 1
 }
 
@@ -158,22 +141,14 @@ function Add-Section {
         [string]$Content
     )
     
-    $selection.Font.Size = 14
-    $selection.Font.Bold = $true
-    $selection.TypeText($Title)
-    $selection.TypeParagraph()
-    $selection.TypeParagraph()
-    
-    $selection.Font.Size = 10
-    $selection.Font.Bold = $false
-    $selection.Font.Name = "Courier New"
+    Add-WordText -WordDocument $WordDocument -Text $Title -FontSize 14 -Bold $true -Color DarkBlue
+    Add-WordText -WordDocument $WordDocument -Text "" # Empty line
     
     if ($Content) {
-        $selection.TypeText($Content)
+        Add-WordText -WordDocument $WordDocument -Text $Content -FontSize 10 -FontFamily "Courier New"
     }
     
-    $selection.TypeParagraph()
-    $selection.TypeParagraph()
+    Add-WordText -WordDocument $WordDocument -Text "" # Empty line
 }
 
 # Function to add table to document
@@ -184,41 +159,35 @@ function Add-Table {
     )
     
     if ($Data.Count -eq 0) {
-        $selection.TypeText("No data available")
-        $selection.TypeParagraph()
+        Add-WordText -WordDocument $WordDocument -Text "No data available" -FontSize 10 -Italic $true
+        Add-WordText -WordDocument $WordDocument -Text "" # Empty line
         return
     }
     
-    $selection.Font.Name = "Calibri"
-    $selection.Font.Size = 10
-    
-    # Create table
-    $table = $doc.Tables.Add($selection.Range, $Data.Count + 1, $Headers.Count)
-    $table.Style = "Grid Table 4 - Accent 1"
+    # Prepare table data
+    $tableData = @()
     
     # Add headers
-    for ($i = 0; $i -lt $Headers.Count; $i++) {
-        $table.Cell(1, $i + 1).Range.Text = $Headers[$i]
-        $table.Cell(1, $i + 1).Range.Font.Bold = $true
-    }
+    $tableData += ,@($Headers)
     
-    # Add data
-    $row = 2
+    # Add data rows
     foreach ($item in $Data) {
-        for ($col = 0; $col -lt $Headers.Count; $col++) {
-            $value = if ($item.PSObject.Properties[$Headers[$col]]) {
-                $item.PSObject.Properties[$Headers[$col]].Value
+        $row = @()
+        foreach ($header in $Headers) {
+            $value = if ($item.PSObject.Properties[$header]) {
+                $item.PSObject.Properties[$header].Value
             } else {
                 ""
             }
-            $table.Cell($row, $col + 1).Range.Text = [string]$value
+            $row += [string]$value
         }
-        $row++
+        $tableData += ,$row
     }
     
-    $selection.EndKey(6) # Move to end of document
-    $selection.TypeParagraph()
-    $selection.TypeParagraph()
+    # Add table to document
+    Add-WordTable -WordDocument $WordDocument -DataTable $tableData -Design LightGridAccent1 -AutoFit AutoFitContent
+    
+    Add-WordText -WordDocument $WordDocument -Text "" # Empty line
 }
 
 # Collect RAS Configuration Data
@@ -230,8 +199,9 @@ try {
     $sites = Get-RASSite -ErrorAction SilentlyContinue
     if ($sites) {
         Add-Section -Title "Site Configuration" -Content ""
-        $siteData = $sites | Select-Object Name, Description, SiteID, State, Version | ConvertTo-HashtableArray
-        Add-Table -Data $siteData -Headers @("Name", "Description", "SiteID", "State", "Version")
+        $siteData = $sites | ConvertTo-HashtableArray
+        $headers = ($sites[0].PSObject.Properties.Name | Where-Object { $_ -notlike "*Internal*" -and $_ -notlike "*PS*" } | Select-Object -First 10)
+        Add-Table -Data $siteData -Headers $headers
     } else {
         Add-Section -Title "Site Configuration" -Content "No sites found or unable to retrieve site information."
     }
@@ -342,7 +312,7 @@ try {
     Write-LogMessage "Warning: Could not retrieve AVD host pool information: $_" "WARNING"
 }
 
-# Published Items Information (Applications and Desktops)
+# Published Items Information
 Write-LogMessage "Collecting published items information..."
 try {
     $pubItems = Get-RASPubItem -ErrorAction SilentlyContinue
@@ -359,100 +329,15 @@ try {
     Write-LogMessage "Warning: Could not retrieve published items information: $_" "WARNING"
 }
 
-# RDS Published Applications
-Write-LogMessage "Collecting RDS published applications..."
-try {
-    $rdsApps = Get-RASPubRDSApp -ErrorAction SilentlyContinue
-    if ($rdsApps) {
-        Add-Section -Title "RDS Published Applications" -Content ""
-        $rdsAppData = $rdsApps | ConvertTo-HashtableArray
-        $headers = ($rdsApps[0].PSObject.Properties.Name | Where-Object { $_ -notlike "*Internal*" -and $_ -notlike "*PS*" } | Select-Object -First 10)
-        Add-Table -Data $rdsAppData -Headers $headers
-    }
-} catch {
-    Write-LogMessage "Warning: Could not retrieve RDS published applications: $_" "WARNING"
-}
-
-# VDI Published Applications
-Write-LogMessage "Collecting VDI published applications..."
-try {
-    $vdiApps = Get-RASPubVDIApp -ErrorAction SilentlyContinue
-    if ($vdiApps) {
-        Add-Section -Title "VDI Published Applications" -Content ""
-        $vdiAppData = $vdiApps | ConvertTo-HashtableArray
-        $headers = ($vdiApps[0].PSObject.Properties.Name | Where-Object { $_ -notlike "*Internal*" -and $_ -notlike "*PS*" } | Select-Object -First 10)
-        Add-Table -Data $vdiAppData -Headers $headers
-    }
-} catch {
-    Write-LogMessage "Warning: Could not retrieve VDI published applications: $_" "WARNING"
-}
-
-# AVD Published Applications
-Write-LogMessage "Collecting AVD published applications..."
-try {
-    $avdApps = Get-RASPubAVDApp -ErrorAction SilentlyContinue
-    if ($avdApps) {
-        Add-Section -Title "AVD Published Applications" -Content ""
-        $avdAppData = $avdApps | ConvertTo-HashtableArray
-        $headers = ($avdApps[0].PSObject.Properties.Name | Where-Object { $_ -notlike "*Internal*" -and $_ -notlike "*PS*" } | Select-Object -First 10)
-        Add-Table -Data $avdAppData -Headers $headers
-    }
-} catch {
-    Write-LogMessage "Warning: Could not retrieve AVD published applications: $_" "WARNING"
-}
-
-# Published Desktops
-Write-LogMessage "Collecting published desktops..."
-try {
-    $rdsDesktops = Get-RASPubRDSDesktop -ErrorAction SilentlyContinue
-    $vdiDesktops = Get-RASPubVDIDesktop -ErrorAction SilentlyContinue
-    $avdDesktops = Get-RASPubAVDDesktop -ErrorAction SilentlyContinue
-    
-    if ($rdsDesktops) {
-        Add-Section -Title "RDS Published Desktops" -Content ""
-        $rdsDesktopData = $rdsDesktops | ConvertTo-HashtableArray
-        $headers = ($rdsDesktops[0].PSObject.Properties.Name | Where-Object { $_ -notlike "*Internal*" -and $_ -notlike "*PS*" } | Select-Object -First 10)
-        Add-Table -Data $rdsDesktopData -Headers $headers
-    }
-    if ($vdiDesktops) {
-        Add-Section -Title "VDI Published Desktops" -Content ""
-        $vdiDesktopData = $vdiDesktops | ConvertTo-HashtableArray
-        $headers = ($vdiDesktops[0].PSObject.Properties.Name | Where-Object { $_ -notlike "*Internal*" -and $_ -notlike "*PS*" } | Select-Object -First 10)
-        Add-Table -Data $vdiDesktopData -Headers $headers
-    }
-    if ($avdDesktops) {
-        Add-Section -Title "AVD Published Desktops" -Content ""
-        $avdDesktopData = $avdDesktops | ConvertTo-HashtableArray
-        $headers = ($avdDesktops[0].PSObject.Properties.Name | Where-Object { $_ -notlike "*Internal*" -and $_ -notlike "*PS*" } | Select-Object -First 10)
-        Add-Table -Data $avdDesktopData -Headers $headers
-    }
-} catch {
-    Write-LogMessage "Warning: Could not retrieve published desktops: $_" "WARNING"
-}
-
-# Note: User information is typically managed through Active Directory integration
-# Use Get-RASADIntegrationSettings to view AD integration configuration
-Write-LogMessage "Collecting AD integration settings..."
-try {
-    $adSettings = Get-RASADIntegrationSettings -ErrorAction SilentlyContinue
-    if ($adSettings) {
-        Add-Section -Title "Active Directory Integration Settings" -Content ""
-        $adSettingsData = $adSettings | ConvertTo-HashtableArray
-        $headers = ($adSettings[0].PSObject.Properties.Name | Where-Object { $_ -notlike "*Internal*" -and $_ -notlike "*PS*" } | Select-Object -First 10)
-        Add-Table -Data $adSettingsData -Headers $headers
-    }
-} catch {
-    Write-LogMessage "Warning: Could not retrieve AD integration settings: $_" "WARNING"
-}
-
 # Gateway Information
 Write-LogMessage "Collecting gateway information..."
 try {
     $gateways = Get-RASGateway -ErrorAction SilentlyContinue
     if ($gateways) {
         Add-Section -Title "Gateway Configuration" -Content ""
-        $gatewayData = $gateways | Select-Object Name, State, IPAddress, Port, Version | ConvertTo-HashtableArray
-        Add-Table -Data $gatewayData -Headers @("Name", "State", "IPAddress", "Port", "Version")
+        $gatewayData = $gateways | ConvertTo-HashtableArray
+        $headers = ($gateways[0].PSObject.Properties.Name | Where-Object { $_ -notlike "*Internal*" -and $_ -notlike "*PS*" } | Select-Object -First 10)
+        Add-Table -Data $gatewayData -Headers $headers
     } else {
         Add-Section -Title "Gateway Configuration" -Content "No gateways found or unable to retrieve gateway information."
     }
@@ -509,66 +394,8 @@ try {
     Write-LogMessage "Warning: Could not retrieve broker information: $_" "WARNING"
 }
 
-# Provider Information
-Write-LogMessage "Collecting provider information..."
-try {
-    $providers = Get-RASProvider -ErrorAction SilentlyContinue
-    if ($providers) {
-        Add-Section -Title "Provider Configuration" -Content ""
-        $providerData = $providers | ConvertTo-HashtableArray
-        $headers = ($providers[0].PSObject.Properties.Name | Where-Object { $_ -notlike "*Internal*" -and $_ -notlike "*PS*" } | Select-Object -First 10)
-        Add-Table -Data $providerData -Headers $headers
-    }
-} catch {
-    Write-LogMessage "Warning: Could not retrieve provider information: $_" "WARNING"
-}
-
-# Theme Information
-Write-LogMessage "Collecting theme information..."
-try {
-    $themes = Get-RASTheme -ErrorAction SilentlyContinue
-    if ($themes) {
-        Add-Section -Title "Theme Configuration" -Content ""
-        $themeData = $themes | ConvertTo-HashtableArray
-        $headers = ($themes[0].PSObject.Properties.Name | Where-Object { $_ -notlike "*Internal*" -and $_ -notlike "*PS*" } | Select-Object -First 10)
-        Add-Table -Data $themeData -Headers $headers
-    }
-} catch {
-    Write-LogMessage "Warning: Could not retrieve theme information: $_" "WARNING"
-}
-
-# Client Policy Information
-Write-LogMessage "Collecting client policy information..."
-try {
-    $clientPolicies = Get-RASClientPolicy -ErrorAction SilentlyContinue
-    if ($clientPolicies) {
-        Add-Section -Title "Client Policy Configuration" -Content ""
-        $clientPolicyData = $clientPolicies | ConvertTo-HashtableArray
-        $headers = ($clientPolicies[0].PSObject.Properties.Name | Where-Object { $_ -notlike "*Internal*" -and $_ -notlike "*PS*" } | Select-Object -First 10)
-        Add-Table -Data $clientPolicyData -Headers $headers
-    }
-} catch {
-    Write-LogMessage "Warning: Could not retrieve client policy information: $_" "WARNING"
-}
-
-# System Settings
-Write-LogMessage "Collecting system settings..."
-try {
-    $systemSettings = Get-RASSystemSettings -ErrorAction SilentlyContinue
-    if ($systemSettings) {
-        Add-Section -Title "System Settings" -Content ""
-        $systemSettingsData = $systemSettings | ConvertTo-HashtableArray
-        $headers = ($systemSettings[0].PSObject.Properties.Name | Where-Object { $_ -notlike "*Internal*" -and $_ -notlike "*PS*" } | Select-Object -First 10)
-        Add-Table -Data $systemSettingsData -Headers $headers
-    }
-} catch {
-    Write-LogMessage "Warning: Could not retrieve system settings: $_" "WARNING"
-}
-
 # Detailed Configuration (as formatted text)
 Write-LogMessage "Collecting detailed configuration..."
-$selection.Font.Name = "Calibri"
-$selection.Font.Size = 10
 
 # Get all available RAS cmdlets and try to get detailed info
 $rasCmdlets = Get-Command -Module rasadmin | Where-Object { $_.Name -like "Get-RAS*" }
@@ -584,10 +411,7 @@ foreach ($cmdlet in $rasCmdlets) {
             Add-Section -Title "$cmdletName - Detailed Information" -Content ""
             
             foreach ($result in $results) {
-                $selection.Font.Bold = $true
-                $selection.TypeText("Object: $($result.Name)")
-                $selection.Font.Bold = $false
-                $selection.TypeParagraph()
+                Add-WordText -WordDocument $WordDocument -Text "Object: $($result.Name)" -FontSize 10 -Bold $true
                 
                 $properties = $result.PSObject.Properties | Where-Object { $_.Name -notlike "*Internal*" -and $_.Name -notlike "*PS*" }
                 
@@ -599,11 +423,10 @@ foreach ($cmdlet in $rasCmdlets) {
                         $value = ($value | ConvertTo-Json -Depth 3)
                     }
                     
-                    $selection.TypeText("  $($prop.Name): $value")
-                    $selection.TypeParagraph()
+                    Add-WordText -WordDocument $WordDocument -Text "  $($prop.Name): $value" -FontSize 9 -FontFamily "Courier New"
                 }
                 
-                $selection.TypeParagraph()
+                Add-WordText -WordDocument $WordDocument -Text "" # Empty line
             }
         }
     } catch {
@@ -611,40 +434,16 @@ foreach ($cmdlet in $rasCmdlets) {
     }
 }
 
-# Ensure output directory exists
-if (-not (Test-Path $OutputPath)) {
-    Write-LogMessage "Creating output directory: $OutputPath"
-    try {
-        New-Item -ItemType Directory -Path $OutputPath -Force | Out-Null
-    } catch {
-        Write-LogMessage "Error creating output directory: $_" "ERROR"
-        $word.Quit()
-        exit 1
-    }
-}
-
-# Save document
-$fullPath = Join-Path $OutputPath "$DocumentName.docx"
+# Save and close document
 Write-LogMessage "Saving document to: $fullPath"
 
 try {
-    $doc.SaveAs([ref]$fullPath)
+    Save-WordDocument -WordDocument $WordDocument
     Write-LogMessage "Document saved successfully!"
 } catch {
     Write-LogMessage "Error saving document: $_" "ERROR"
-    $word.Quit()
     exit 1
 }
-
-# Close Word
-$doc.Close()
-$word.Quit()
-
-# Release COM objects
-[System.Runtime.Interopservices.Marshal]::ReleaseComObject($doc) | Out-Null
-[System.Runtime.Interopservices.Marshal]::ReleaseComObject($word) | Out-Null
-[System.GC]::Collect()
-[System.GC]::WaitForPendingFinalizers()
 
 Write-LogMessage "Documentation complete! File saved to: $fullPath"
 

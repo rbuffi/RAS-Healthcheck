@@ -1,6 +1,11 @@
 # Parallels RAS Settings Documentation Tool
 
-This PowerShell script documents all settings from a Parallels RAS installation and exports them to a Microsoft Word document.
+This PowerShell script documents all settings from a Parallels RAS installation and exports them to a Word document.
+
+## Available Scripts
+
+1. **Export-RASSettings.ps1** - Original version that requires Microsoft Word installed (uses COM automation)
+2. **Export-RASSettings-PSWriteWord.ps1** - Recommended version that does NOT require Word (uses PSWriteWord module)
 
 ## Prerequisites
 
@@ -8,9 +13,9 @@ This PowerShell script documents all settings from a Parallels RAS installation 
    - The Parallels RAS PowerShell module must be installed
    - Typically installed with Parallels RAS or available from Parallels
 
-2. **Microsoft Word**
-   - Microsoft Word must be installed on the system
-   - The script uses COM automation to create the Word document
+2. **Output Format Requirements** (choose one):
+   - **For Export-RASSettings.ps1**: Microsoft Word must be installed (uses COM automation)
+   - **For Export-RASSettings-PSWriteWord.ps1**: PSWriteWord module (Install-Module PSWriteWord) - **Recommended, no Word required**
 
 3. **Permissions**
    - Appropriate permissions to access Parallels RAS configuration
@@ -25,12 +30,22 @@ This PowerShell script documents all settings from a Parallels RAS installation 
 
 2. If not installed, install it according to Parallels RAS documentation
 
+3. **For PSWriteWord version (recommended)**, install the PSWriteWord module:
+   ```powershell
+   Install-Module -Name PSWriteWord -Scope CurrentUser
+   ```
+   The script will attempt to install it automatically if not found.
+
 ## Usage
 
 ### Basic Usage
 
-Run the script from PowerShell:
+**Recommended (no Word required):**
+```powershell
+.\Export-RASSettings-PSWriteWord.ps1
+```
 
+**Original version (requires Word):**
 ```powershell
 .\Export-RASSettings.ps1
 ```
@@ -88,8 +103,16 @@ If you receive an error about the Parallels RAS module not being found:
 
 ### Word Not Available
 
-If Word is not available:
+**Solution: Use the PSWriteWord version instead!**
 
+If you don't have Word installed, use:
+```powershell
+.\Export-RASSettings-PSWriteWord.ps1
+```
+
+This version uses the PSWriteWord module which creates Word documents without requiring Microsoft Word to be installed.
+
+If you prefer the original version:
 - Ensure Microsoft Word is installed
 - Check that Word can be accessed via COM automation
 - Try running PowerShell as administrator
