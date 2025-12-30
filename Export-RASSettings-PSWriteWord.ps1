@@ -193,7 +193,7 @@ function Add-Table {
     }
     
     # Add table to document
-    Add-WordTable -WordDocument $WordDocument -DataTable $tableData -Design LightGridAccent1 -AutoFit AutoFitContent
+    Add-WordTable -WordDocument $WordDocument -DataTable $tableData -Design LightGridAccent1 -AutoFit Contents
     
     Add-WordText -WordDocument $WordDocument -Text "" # Empty line
 }
@@ -424,11 +424,27 @@ foreach ($cmdlet in $rasCmdlets) {
         }
         
         # Suppress all prompts and use non-interactive mode
-        # Redirect stdin to prevent any input prompts
+        # Check if cmdlet supports Confirm and WhatIf parameters before using them
+        $cmdletInfo = Get-Command $cmdletName
+        $supportsConfirm = $cmdletInfo.Parameters.ContainsKey('Confirm')
+        $supportsWhatIf = $cmdletInfo.Parameters.ContainsKey('WhatIf')
+        
         $results = $null
         try {
-            # Use a try-catch to handle any prompts gracefully
-            $results = & $cmdletName -ErrorAction SilentlyContinue -Confirm:$false -WhatIf:$false 2>&1 | 
+            # Build parameter hashtable dynamically based on what the cmdlet supports
+            $params = @{
+                ErrorAction = 'SilentlyContinue'
+            }
+            
+            if ($supportsConfirm) {
+                $params['Confirm'] = $false
+            }
+            if ($supportsWhatIf) {
+                $params['WhatIf'] = $false
+            }
+            
+            # Use splatting to call the cmdlet with only supported parameters
+            $results = & $cmdletName @params 2>&1 | 
                 Where-Object { $_ -isnot [System.Management.Automation.ErrorRecord] }
         } catch {
             # If cmdlet prompts or errors, skip it
