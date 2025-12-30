@@ -215,68 +215,209 @@ try {
     Write-LogMessage "Warning: Could not retrieve site information: $_" "WARNING"
 }
 
-# Server Information
-Write-LogMessage "Collecting server information..."
+# RDS Host Information
+Write-LogMessage "Collecting RDS host information..."
 try {
-    $servers = Get-RASServer -ErrorAction SilentlyContinue
-    if ($servers) {
-        Add-Section -Title "Server Configuration" -Content ""
-        $serverData = $servers | Select-Object Name, ServerType, State, IPAddress, Version, OSVersion | ConvertTo-HashtableArray
-        Add-Table -Data $serverData -Headers @("Name", "ServerType", "State", "IPAddress", "Version", "OSVersion")
+    $rdsHosts = Get-RASRDSHost -ErrorAction SilentlyContinue
+    if ($rdsHosts) {
+        Add-Section -Title "RDS Host Configuration" -Content ""
+        $rdsHostData = $rdsHosts | ConvertTo-HashtableArray
+        $headers = ($rdsHosts[0].PSObject.Properties.Name | Where-Object { $_ -notlike "*Internal*" -and $_ -notlike "*PS*" } | Select-Object -First 10)
+        Add-Table -Data $rdsHostData -Headers $headers
     } else {
-        Add-Section -Title "Server Configuration" -Content "No servers found or unable to retrieve server information."
+        Add-Section -Title "RDS Host Configuration" -Content "No RDS hosts found or unable to retrieve RDS host information."
     }
 } catch {
-    Add-Section -Title "Server Configuration" -Content "Error retrieving server information: $_"
-    Write-LogMessage "Warning: Could not retrieve server information: $_" "WARNING"
+    Add-Section -Title "RDS Host Configuration" -Content "Error retrieving RDS host information: $_"
+    Write-LogMessage "Warning: Could not retrieve RDS host information: $_" "WARNING"
 }
 
-# Farm Information
-Write-LogMessage "Collecting farm information..."
+# VDI Host Information
+Write-LogMessage "Collecting VDI host information..."
 try {
-    $farms = Get-RASFarm -ErrorAction SilentlyContinue
-    if ($farms) {
-        Add-Section -Title "Farm Configuration" -Content ""
-        $farmData = $farms | Select-Object Name, Description, FarmType, State, LoadBalancingMethod | ConvertTo-HashtableArray
-        Add-Table -Data $farmData -Headers @("Name", "Description", "FarmType", "State", "LoadBalancingMethod")
+    $vdiHosts = Get-RASVDIHost -ErrorAction SilentlyContinue
+    if ($vdiHosts) {
+        Add-Section -Title "VDI Host Configuration" -Content ""
+        $vdiHostData = $vdiHosts | ConvertTo-HashtableArray
+        $headers = ($vdiHosts[0].PSObject.Properties.Name | Where-Object { $_ -notlike "*Internal*" -and $_ -notlike "*PS*" } | Select-Object -First 10)
+        Add-Table -Data $vdiHostData -Headers $headers
     } else {
-        Add-Section -Title "Farm Configuration" -Content "No farms found or unable to retrieve farm information."
+        Add-Section -Title "VDI Host Configuration" -Content "No VDI hosts found or unable to retrieve VDI host information."
     }
 } catch {
-    Add-Section -Title "Farm Configuration" -Content "Error retrieving farm information: $_"
-    Write-LogMessage "Warning: Could not retrieve farm information: $_" "WARNING"
+    Add-Section -Title "VDI Host Configuration" -Content "Error retrieving VDI host information: $_"
+    Write-LogMessage "Warning: Could not retrieve VDI host information: $_" "WARNING"
 }
 
-# Application Information
-Write-LogMessage "Collecting application information..."
+# AVD Host Information
+Write-LogMessage "Collecting AVD host information..."
 try {
-    $applications = Get-RASApplication -ErrorAction SilentlyContinue
-    if ($applications) {
-        Add-Section -Title "Application Configuration" -Content ""
-        $appData = $applications | Select-Object Name, DisplayName, ApplicationType, State, FarmName | ConvertTo-HashtableArray
-        Add-Table -Data $appData -Headers @("Name", "DisplayName", "ApplicationType", "State", "FarmName")
+    $avdHosts = Get-RASAVDHost -ErrorAction SilentlyContinue
+    if ($avdHosts) {
+        Add-Section -Title "AVD Host Configuration" -Content ""
+        $avdHostData = $avdHosts | ConvertTo-HashtableArray
+        $headers = ($avdHosts[0].PSObject.Properties.Name | Where-Object { $_ -notlike "*Internal*" -and $_ -notlike "*PS*" } | Select-Object -First 10)
+        Add-Table -Data $avdHostData -Headers $headers
     } else {
-        Add-Section -Title "Application Configuration" -Content "No applications found or unable to retrieve application information."
+        Add-Section -Title "AVD Host Configuration" -Content "No AVD hosts found or unable to retrieve AVD host information."
     }
 } catch {
-    Add-Section -Title "Application Configuration" -Content "Error retrieving application information: $_"
-    Write-LogMessage "Warning: Could not retrieve application information: $_" "WARNING"
+    Add-Section -Title "AVD Host Configuration" -Content "Error retrieving AVD host information: $_"
+    Write-LogMessage "Warning: Could not retrieve AVD host information: $_" "WARNING"
 }
 
-# User Information
-Write-LogMessage "Collecting user information..."
+# RDS Host Pool Information
+Write-LogMessage "Collecting RDS host pool information..."
 try {
-    $users = Get-RASUser -ErrorAction SilentlyContinue
-    if ($users) {
-        Add-Section -Title "User Configuration" -Content ""
-        $userData = $users | Select-Object UserName, DisplayName, Email, Enabled | ConvertTo-HashtableArray
-        Add-Table -Data $userData -Headers @("UserName", "DisplayName", "Email", "Enabled")
+    $rdsHostPools = Get-RASRDSHostPool -ErrorAction SilentlyContinue
+    if ($rdsHostPools) {
+        Add-Section -Title "RDS Host Pool Configuration" -Content ""
+        $rdsHostPoolData = $rdsHostPools | ConvertTo-HashtableArray
+        $headers = ($rdsHostPools[0].PSObject.Properties.Name | Where-Object { $_ -notlike "*Internal*" -and $_ -notlike "*PS*" } | Select-Object -First 10)
+        Add-Table -Data $rdsHostPoolData -Headers $headers
     } else {
-        Add-Section -Title "User Configuration" -Content "No users found or unable to retrieve user information."
+        Add-Section -Title "RDS Host Pool Configuration" -Content "No RDS host pools found or unable to retrieve RDS host pool information."
     }
 } catch {
-    Add-Section -Title "User Configuration" -Content "Error retrieving user information: $_"
-    Write-LogMessage "Warning: Could not retrieve user information: $_" "WARNING"
+    Add-Section -Title "RDS Host Pool Configuration" -Content "Error retrieving RDS host pool information: $_"
+    Write-LogMessage "Warning: Could not retrieve RDS host pool information: $_" "WARNING"
+}
+
+# VDI Host Pool Information
+Write-LogMessage "Collecting VDI host pool information..."
+try {
+    $vdiHostPools = Get-RASVDIHostPool -ErrorAction SilentlyContinue
+    if ($vdiHostPools) {
+        Add-Section -Title "VDI Host Pool Configuration" -Content ""
+        $vdiHostPoolData = $vdiHostPools | ConvertTo-HashtableArray
+        $headers = ($vdiHostPools[0].PSObject.Properties.Name | Where-Object { $_ -notlike "*Internal*" -and $_ -notlike "*PS*" } | Select-Object -First 10)
+        Add-Table -Data $vdiHostPoolData -Headers $headers
+    } else {
+        Add-Section -Title "VDI Host Pool Configuration" -Content "No VDI host pools found or unable to retrieve VDI host pool information."
+    }
+} catch {
+    Add-Section -Title "VDI Host Pool Configuration" -Content "Error retrieving VDI host pool information: $_"
+    Write-LogMessage "Warning: Could not retrieve VDI host pool information: $_" "WARNING"
+}
+
+# AVD Host Pool Information
+Write-LogMessage "Collecting AVD host pool information..."
+try {
+    $avdHostPools = Get-RASAVDHostPool -ErrorAction SilentlyContinue
+    if ($avdHostPools) {
+        Add-Section -Title "AVD Host Pool Configuration" -Content ""
+        $avdHostPoolData = $avdHostPools | ConvertTo-HashtableArray
+        $headers = ($avdHostPools[0].PSObject.Properties.Name | Where-Object { $_ -notlike "*Internal*" -and $_ -notlike "*PS*" } | Select-Object -First 10)
+        Add-Table -Data $avdHostPoolData -Headers $headers
+    } else {
+        Add-Section -Title "AVD Host Pool Configuration" -Content "No AVD host pools found or unable to retrieve AVD host pool information."
+    }
+} catch {
+    Add-Section -Title "AVD Host Pool Configuration" -Content "Error retrieving AVD host pool information: $_"
+    Write-LogMessage "Warning: Could not retrieve AVD host pool information: $_" "WARNING"
+}
+
+# Published Items Information (Applications and Desktops)
+Write-LogMessage "Collecting published items information..."
+try {
+    $pubItems = Get-RASPubItem -ErrorAction SilentlyContinue
+    if ($pubItems) {
+        Add-Section -Title "Published Items Configuration" -Content ""
+        $pubItemData = $pubItems | ConvertTo-HashtableArray
+        $headers = ($pubItems[0].PSObject.Properties.Name | Where-Object { $_ -notlike "*Internal*" -and $_ -notlike "*PS*" } | Select-Object -First 10)
+        Add-Table -Data $pubItemData -Headers $headers
+    } else {
+        Add-Section -Title "Published Items Configuration" -Content "No published items found or unable to retrieve published items information."
+    }
+} catch {
+    Add-Section -Title "Published Items Configuration" -Content "Error retrieving published items information: $_"
+    Write-LogMessage "Warning: Could not retrieve published items information: $_" "WARNING"
+}
+
+# RDS Published Applications
+Write-LogMessage "Collecting RDS published applications..."
+try {
+    $rdsApps = Get-RASPubRDSApp -ErrorAction SilentlyContinue
+    if ($rdsApps) {
+        Add-Section -Title "RDS Published Applications" -Content ""
+        $rdsAppData = $rdsApps | ConvertTo-HashtableArray
+        $headers = ($rdsApps[0].PSObject.Properties.Name | Where-Object { $_ -notlike "*Internal*" -and $_ -notlike "*PS*" } | Select-Object -First 10)
+        Add-Table -Data $rdsAppData -Headers $headers
+    }
+} catch {
+    Write-LogMessage "Warning: Could not retrieve RDS published applications: $_" "WARNING"
+}
+
+# VDI Published Applications
+Write-LogMessage "Collecting VDI published applications..."
+try {
+    $vdiApps = Get-RASPubVDIApp -ErrorAction SilentlyContinue
+    if ($vdiApps) {
+        Add-Section -Title "VDI Published Applications" -Content ""
+        $vdiAppData = $vdiApps | ConvertTo-HashtableArray
+        $headers = ($vdiApps[0].PSObject.Properties.Name | Where-Object { $_ -notlike "*Internal*" -and $_ -notlike "*PS*" } | Select-Object -First 10)
+        Add-Table -Data $vdiAppData -Headers $headers
+    }
+} catch {
+    Write-LogMessage "Warning: Could not retrieve VDI published applications: $_" "WARNING"
+}
+
+# AVD Published Applications
+Write-LogMessage "Collecting AVD published applications..."
+try {
+    $avdApps = Get-RASPubAVDApp -ErrorAction SilentlyContinue
+    if ($avdApps) {
+        Add-Section -Title "AVD Published Applications" -Content ""
+        $avdAppData = $avdApps | ConvertTo-HashtableArray
+        $headers = ($avdApps[0].PSObject.Properties.Name | Where-Object { $_ -notlike "*Internal*" -and $_ -notlike "*PS*" } | Select-Object -First 10)
+        Add-Table -Data $avdAppData -Headers $headers
+    }
+} catch {
+    Write-LogMessage "Warning: Could not retrieve AVD published applications: $_" "WARNING"
+}
+
+# Published Desktops
+Write-LogMessage "Collecting published desktops..."
+try {
+    $rdsDesktops = Get-RASPubRDSDesktop -ErrorAction SilentlyContinue
+    $vdiDesktops = Get-RASPubVDIDesktop -ErrorAction SilentlyContinue
+    $avdDesktops = Get-RASPubAVDDesktop -ErrorAction SilentlyContinue
+    
+    if ($rdsDesktops) {
+        Add-Section -Title "RDS Published Desktops" -Content ""
+        $rdsDesktopData = $rdsDesktops | ConvertTo-HashtableArray
+        $headers = ($rdsDesktops[0].PSObject.Properties.Name | Where-Object { $_ -notlike "*Internal*" -and $_ -notlike "*PS*" } | Select-Object -First 10)
+        Add-Table -Data $rdsDesktopData -Headers $headers
+    }
+    if ($vdiDesktops) {
+        Add-Section -Title "VDI Published Desktops" -Content ""
+        $vdiDesktopData = $vdiDesktops | ConvertTo-HashtableArray
+        $headers = ($vdiDesktops[0].PSObject.Properties.Name | Where-Object { $_ -notlike "*Internal*" -and $_ -notlike "*PS*" } | Select-Object -First 10)
+        Add-Table -Data $vdiDesktopData -Headers $headers
+    }
+    if ($avdDesktops) {
+        Add-Section -Title "AVD Published Desktops" -Content ""
+        $avdDesktopData = $avdDesktops | ConvertTo-HashtableArray
+        $headers = ($avdDesktops[0].PSObject.Properties.Name | Where-Object { $_ -notlike "*Internal*" -and $_ -notlike "*PS*" } | Select-Object -First 10)
+        Add-Table -Data $avdDesktopData -Headers $headers
+    }
+} catch {
+    Write-LogMessage "Warning: Could not retrieve published desktops: $_" "WARNING"
+}
+
+# Note: User information is typically managed through Active Directory integration
+# Use Get-RASADIntegrationSettings to view AD integration configuration
+Write-LogMessage "Collecting AD integration settings..."
+try {
+    $adSettings = Get-RASADIntegrationSettings -ErrorAction SilentlyContinue
+    if ($adSettings) {
+        Add-Section -Title "Active Directory Integration Settings" -Content ""
+        $adSettingsData = $adSettings | ConvertTo-HashtableArray
+        $headers = ($adSettings[0].PSObject.Properties.Name | Where-Object { $_ -notlike "*Internal*" -and $_ -notlike "*PS*" } | Select-Object -First 10)
+        Add-Table -Data $adSettingsData -Headers $headers
+    }
+} catch {
+    Write-LogMessage "Warning: Could not retrieve AD integration settings: $_" "WARNING"
 }
 
 # Gateway Information
@@ -298,11 +439,12 @@ try {
 # License Information
 Write-LogMessage "Collecting license information..."
 try {
-    $licenses = Get-RASLicense -ErrorAction SilentlyContinue
-    if ($licenses) {
+    $licenseDetails = Get-RASLicenseDetails -ErrorAction SilentlyContinue
+    if ($licenseDetails) {
         Add-Section -Title "License Configuration" -Content ""
-        $licenseData = $licenses | Select-Object LicenseType, TotalLicenses, UsedLicenses, AvailableLicenses, ExpirationDate | ConvertTo-HashtableArray
-        Add-Table -Data $licenseData -Headers @("LicenseType", "TotalLicenses", "UsedLicenses", "AvailableLicenses", "ExpirationDate")
+        $licenseData = $licenseDetails | ConvertTo-HashtableArray
+        $headers = ($licenseDetails[0].PSObject.Properties.Name | Where-Object { $_ -notlike "*Internal*" -and $_ -notlike "*PS*" } | Select-Object -First 10)
+        Add-Table -Data $licenseData -Headers $headers
     } else {
         Add-Section -Title "License Configuration" -Content "No license information found or unable to retrieve license information."
     }
@@ -311,20 +453,91 @@ try {
     Write-LogMessage "Warning: Could not retrieve license information: $_" "WARNING"
 }
 
-# Session Information
-Write-LogMessage "Collecting session information..."
+# RDS Session Information
+Write-LogMessage "Collecting RDS session information..."
 try {
-    $sessions = Get-RASSession -ErrorAction SilentlyContinue
-    if ($sessions) {
-        Add-Section -Title "Active Sessions" -Content ""
-        $sessionData = $sessions | Select-Object UserName, ApplicationName, ServerName, State, StartTime | ConvertTo-HashtableArray
-        Add-Table -Data $sessionData -Headers @("UserName", "ApplicationName", "ServerName", "State", "StartTime")
+    $rdsSessions = Get-RASRDSession -ErrorAction SilentlyContinue
+    if ($rdsSessions) {
+        Add-Section -Title "Active RDS Sessions" -Content ""
+        $rdsSessionData = $rdsSessions | ConvertTo-HashtableArray
+        $headers = ($rdsSessions[0].PSObject.Properties.Name | Where-Object { $_ -notlike "*Internal*" -and $_ -notlike "*PS*" } | Select-Object -First 10)
+        Add-Table -Data $rdsSessionData -Headers $headers
     } else {
-        Add-Section -Title "Active Sessions" -Content "No active sessions found."
+        Add-Section -Title "Active RDS Sessions" -Content "No active RDS sessions found."
     }
 } catch {
-    Add-Section -Title "Active Sessions" -Content "Error retrieving session information: $_"
-    Write-LogMessage "Warning: Could not retrieve session information: $_" "WARNING"
+    Add-Section -Title "Active RDS Sessions" -Content "Error retrieving RDS session information: $_"
+    Write-LogMessage "Warning: Could not retrieve RDS session information: $_" "WARNING"
+}
+
+# Broker Information
+Write-LogMessage "Collecting broker information..."
+try {
+    $brokers = Get-RASBroker -ErrorAction SilentlyContinue
+    if ($brokers) {
+        Add-Section -Title "Broker Configuration" -Content ""
+        $brokerData = $brokers | ConvertTo-HashtableArray
+        $headers = ($brokers[0].PSObject.Properties.Name | Where-Object { $_ -notlike "*Internal*" -and $_ -notlike "*PS*" } | Select-Object -First 10)
+        Add-Table -Data $brokerData -Headers $headers
+    }
+} catch {
+    Write-LogMessage "Warning: Could not retrieve broker information: $_" "WARNING"
+}
+
+# Provider Information
+Write-LogMessage "Collecting provider information..."
+try {
+    $providers = Get-RASProvider -ErrorAction SilentlyContinue
+    if ($providers) {
+        Add-Section -Title "Provider Configuration" -Content ""
+        $providerData = $providers | ConvertTo-HashtableArray
+        $headers = ($providers[0].PSObject.Properties.Name | Where-Object { $_ -notlike "*Internal*" -and $_ -notlike "*PS*" } | Select-Object -First 10)
+        Add-Table -Data $providerData -Headers $headers
+    }
+} catch {
+    Write-LogMessage "Warning: Could not retrieve provider information: $_" "WARNING"
+}
+
+# Theme Information
+Write-LogMessage "Collecting theme information..."
+try {
+    $themes = Get-RASTheme -ErrorAction SilentlyContinue
+    if ($themes) {
+        Add-Section -Title "Theme Configuration" -Content ""
+        $themeData = $themes | ConvertTo-HashtableArray
+        $headers = ($themes[0].PSObject.Properties.Name | Where-Object { $_ -notlike "*Internal*" -and $_ -notlike "*PS*" } | Select-Object -First 10)
+        Add-Table -Data $themeData -Headers $headers
+    }
+} catch {
+    Write-LogMessage "Warning: Could not retrieve theme information: $_" "WARNING"
+}
+
+# Client Policy Information
+Write-LogMessage "Collecting client policy information..."
+try {
+    $clientPolicies = Get-RASClientPolicy -ErrorAction SilentlyContinue
+    if ($clientPolicies) {
+        Add-Section -Title "Client Policy Configuration" -Content ""
+        $clientPolicyData = $clientPolicies | ConvertTo-HashtableArray
+        $headers = ($clientPolicies[0].PSObject.Properties.Name | Where-Object { $_ -notlike "*Internal*" -and $_ -notlike "*PS*" } | Select-Object -First 10)
+        Add-Table -Data $clientPolicyData -Headers $headers
+    }
+} catch {
+    Write-LogMessage "Warning: Could not retrieve client policy information: $_" "WARNING"
+}
+
+# System Settings
+Write-LogMessage "Collecting system settings..."
+try {
+    $systemSettings = Get-RASSystemSettings -ErrorAction SilentlyContinue
+    if ($systemSettings) {
+        Add-Section -Title "System Settings" -Content ""
+        $systemSettingsData = $systemSettings | ConvertTo-HashtableArray
+        $headers = ($systemSettings[0].PSObject.Properties.Name | Where-Object { $_ -notlike "*Internal*" -and $_ -notlike "*PS*" } | Select-Object -First 10)
+        Add-Table -Data $systemSettingsData -Headers $headers
+    }
+} catch {
+    Write-LogMessage "Warning: Could not retrieve system settings: $_" "WARNING"
 }
 
 # Detailed Configuration (as formatted text)
